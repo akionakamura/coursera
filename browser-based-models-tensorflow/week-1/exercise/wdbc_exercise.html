@@ -1,0 +1,94 @@
+<html>
+<head></head>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest"></script>
+    <script lang="js">
+        const batchSize = 10;
+        
+        async function run(){
+            const trainingUrl = 'wdbc-train.csv';
+            
+            // Load the training data and specify the label column.
+            const trainingData = tf.data.csv(trainingUrl, {
+                columnConfigs: {
+                    // This is the name of the label header in the CSV file.
+                    diagnosis: {
+                        isLabel: true
+                    }
+                }
+            });
+            
+            // Convert the training data into arrays.
+            const convertedTrainingData = trainingData.map(({xs, ys}) => {                
+                return {
+                    xs: Object.values(xs),
+                    ys: Object.values(ys)
+                };
+            }).batch(batchSize);
+                  
+            const testingUrl = 'wdbc-test.csv';
+            
+            // Load the test data and specify the label column.
+            const testingData = tf.data.csv(testingUrl, {
+                columnConfigs: {
+                    // This is the name of the label header in the CSV file.
+                    diagnosis: {
+                        isLabel: true
+                    }
+                }
+            });
+            
+            // Convert the training data into arrays.
+            const convertedTestingData = testingData.map(({xs, ys}) => {                
+                return {
+                    xs: Object.values(xs),
+                    ys: Object.values(ys)
+                };
+            }).batch(114);
+                  
+
+            // Specify the number of features.
+            const numOfFeatures = (await trainingData.columnNames()).length - 1;
+            
+            // Define the model, with two hidden layers with "relu" activation and
+            // single signoid output for classification.
+            const model = tf.sequential();
+            model.add(tf.layers.dense({
+                units: 8,
+                activation: "relu",
+                inputShape: [numOfFeatures]
+            }));
+            model.add(tf.layers.dense({
+                units: 4,
+                activation: "relu"
+            }));
+            model.add(tf.layers.dense({
+                units: 1,
+                activation: "sigmoid"
+            }));
+            
+            // Compile the model using the binaryCrossentropy loss, 
+            // the rmsprop optimizer, and accuracy for your metrics. 
+            model.compile({
+                loss: "binaryCrossentropy",
+                optimizer: "rmsprop",
+                metrics: ["accuracy"]
+            });
+
+            model.summary();
+            
+            
+            await model.fitDataset(convertedTrainingData, 
+                             {epochs:100,
+                              validationData: convertedTestingData,
+                              callbacks:{
+                                  onEpochEnd: async(epoch, logs) => {
+                                      console.log("Epoch: " + epoch, logs);
+                                  }
+                              }});
+            await model.save('downloads://my_model');
+        }
+        run();
+    </script>
+<body>
+</body>
+</html>
