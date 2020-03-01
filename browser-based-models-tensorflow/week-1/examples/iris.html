@@ -3,9 +3,9 @@
     <head></head>
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest"></script>
     <script lang="js">
-        function run() {
+        async function run() {
             // Loads the CSV as a tf.Dataset
-            const csvUrl = "iris.data";
+            const csvUrl = "iris.csv";
             const trainingData = tf.data.csv(csvUrl, {
                 columnConfigs: {
                     // This is the name of the label header in the CSV file.
@@ -15,12 +15,12 @@
                 }
             });
 
-            const inputSize = (await trainingData.columnNames()).lenth - 1;
+            const inputSize = (await trainingData.columnNames()).length - 1;
             const numSamples = 150;
             const batchSize = 10;
-
+            
             // Convert that to one-hot encoding
-            const convertedData = trainingData.map((xs, ys) => {
+            const convertedData = trainingData.map(({xs, ys}) => {
                 const labels = [
                     ys.species == "setosa" ? 1: 0,
                     ys.species == "virginica" ? 1 : 0,
@@ -31,7 +31,7 @@
                     xs: Object.values(xs),
                     ys: Object.values(labels)
                 };
-            }).batch(batchSize)
+            }).batch(batchSize);
 
             // Define the model.
             const model = tf.sequential();
@@ -45,8 +45,8 @@
                 activation: "softmax"
             }));
             model.compile({
-                loss: "categoricalCrossEntropy",
-                optimizer: tf.train.adas(0.06)
+                loss: "categoricalCrossentropy",
+                optimizer: tf.train.adam(0.06)
             });
 
             await model.fitDataset(convertedData, {
@@ -56,11 +56,15 @@
                         console.log("Epoch: " + epoch + " Loss: " + logs.loss);
                     }
                 }
-            })
+            });
 
             const testVal = tf.tensor2d([4.4, 2.9, 1.4, 0.2], [1, 4]);
             const prediction = model.predict(testVal);
-            alert(prediction);
+            const predictionIndex = tf.argMax(prediction, axis=1).dataSync();
+
+            const labelNames = ["Setosa", "Virginica", "Versicolor"];
+
+            alert(labelNames[predictionIndex]);
         }
 
         run();
@@ -69,4 +73,4 @@
     <body>
         <h1>Iris Classifier</h1>    
     </body>
-</html>>
+</html>
